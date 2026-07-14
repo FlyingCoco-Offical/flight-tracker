@@ -1,165 +1,385 @@
-import requests
-import webbrowser
-import folium
-from IPython.display import display
-
-
-def create_map(planes, title="Aircraft Map"):
-    if not planes:
-        print("No aircraft to display.")
-        return
-
-    # Center map on first aircraft
-    first = planes[0]
-    flight_map = folium.Map(
-        location=[first.get("lat"), first.get("lon")],
-        zoom_start=7
-    )
-
-    for plane in planes:
-        lat = plane.get("lat")
-        lon = plane.get("lon")
-
-        if lat is None or lon is None:
-            continue
-
-        popup = f"""
-        Flight: {plane.get('flight', 'Unknown')}<br>
-        Registration: {plane.get('r', 'Unknown')}<br>
-        Aircraft Type: {plane.get('t', 'Unknown')}<br>
-        Altitude: {plane.get('alt_baro', 'Unknown')} ft<br>
-        Speed: {plane.get('gs', 'Unknown')} knots
-        """
-
-        folium.Marker(
-            [lat, lon],
-            popup=popup,
-            icon=folium.Icon(color="blue", icon="plane")
-        ).add_to(flight_map)
-
-    display(flight_map)
-
-
-print("Welcome to AKM Flight Tracker powered by ADSB.LOL")
-print("Select an option to continue:")
-print("1. Track a flight by callsign")
-print("2. Show all emergency flights")
-
-one_or_two = int(input("Please type a selection from above: "))
-
-
-if one_or_two == 1:
-
-    callsign = input("Enter a callsign: ").upper()
-
-    url = f"https://api.adsb.lol/v2/callsign/{callsign}"
-
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        data = response.json()
-
-        if data["ac"]:
-
-            plane = data["ac"][0]
-
-            print("\nFlight:", plane.get("flight"))
-            print("Registration:", plane.get("r"))
-            print("Aircraft type:", plane.get("t"))
-            print("Latitude:", plane.get("lat"))
-            print("Longitude:", plane.get("lon"))
-            print("Altitude:", plane.get("alt_baro"), "ft")
-            print("Speed:", plane.get("gs"))
-
-            print("")
-            print("Tracking Link:",
-                  f"https://globe.adsb.lol/?icao={plane.get('hex')}")
-
-            openlink = input(
-                "Would you like to open the tracking link (y/n): "
-            ).lower()
-
-            if openlink == "y":
-                webbrowser.open(
-                    f"https://globe.adsb.lol/?icao={plane.get('hex')}"
-                )
-
-            elif openlink == "n":
-                print("--Thank you--")
-
-            # Display map
-            create_map([plane])
-
-
-        else:
-            print("Flight not currently tracked")
-
-    else:
-        print("API Error:", response.status_code)
-
-
-
-elif one_or_two == 2:
-
-    print("\nSquawk Types:")
-    print("A) 7500: Active Hijacking")
-    print("B) 7600: Communication Failure")
-    print("C) 7700: Mechanical/Other Failure")
-    print("D) All Emergencies")
-
-    squawk_type = input(
-        "Which squawk would you like to track: "
-    ).lower()
-
-
-    if squawk_type == "a":
-        codes = ["7500"]
-
-    elif squawk_type == "b":
-        codes = ["7600"]
-
-    elif squawk_type == "c":
-        codes = ["7700"]
-
-    elif squawk_type == "d":
-        codes = ["7500", "7600", "7700"]
-
-    else:
-        print("Invalid option")
-        codes = []
-
-
-    emergency_planes = []
-
-
-    for code in codes:
-
-        url = f"https://api.adsb.lol/v2/squawk/{code}"
-
-        response = requests.get(url)
-
-        if response.status_code == 200:
-
-            data = response.json()
-
-            print(f"\nSquawk {code}:")
-            print(f"Aircraft found: {data['total']}")
-
-            for plane in data["ac"]:
-
-                emergency_planes.append(plane)
-
-                print(
-                    "Flight:", plane.get("flight", "Unknown"),
-                    "Registration:", plane.get("r", "Unknown"),
-                    "Type:", plane.get("t", "Unknown"),
-                    "Lat:", plane.get("lat"),
-                    "Lon:", plane.get("lon")
-                )
-
-        else:
-            print("API Error:", response.status_code)
-
-
-    # Show all emergency aircraft on one map
-    create_map(emergency_planes)
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyOoQ4669VCiaG9TFRJ4yFfe",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/FlyingCoco-Offical/flight-tracker/blob/main/flight-tracker.py\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import requests\n",
+        "import folium\n",
+        "from IPython.display import display\n",
+        "\n",
+        "\n",
+        "def create_map(planes, title=\"Aircraft Map\"):\n",
+        "    if not planes:\n",
+        "        print(\"No aircraft to display.\")\n",
+        "        return\n",
+        "\n",
+        "    # Center map on first aircraft\n",
+        "    first = planes[0]\n",
+        "    flight_map = folium.Map(\n",
+        "        location=[first.get(\"lat\"), first.get(\"lon\")],\n",
+        "        zoom_start=7\n",
+        "    )\n",
+        "\n",
+        "    for plane in planes:\n",
+        "        lat = plane.get(\"lat\")\n",
+        "        lon = plane.get(\"lon\")\n",
+        "\n",
+        "        if lat is None or lon is None:\n",
+        "            continue\n",
+        "\n",
+        "        popup = f\"\"\"\n",
+        "        Flight: {plane.get('flight', 'Unknown')}<br>\n",
+        "        Registration: {plane.get('r', 'Unknown')}<br>\n",
+        "        Aircraft Type: {plane.get('t', 'Unknown')}<br>\n",
+        "        Altitude: {plane.get('alt_baro', 'Unknown')} ft<br>\n",
+        "        Speed: {plane.get('gs', 'Unknown')} knots\n",
+        "        \"\"\"\n",
+        "\n",
+        "        folium.Marker(\n",
+        "            [lat, lon],\n",
+        "            popup=popup,\n",
+        "            icon=folium.Icon(color=\"blue\", icon=\"plane\")\n",
+        "        ).add_to(flight_map)\n",
+        "\n",
+        "    display(flight_map)\n",
+        "\n",
+        "\n",
+        "print(\"Welcome to AKM Flight Tracker powered by ADSB.LOL\")\n",
+        "print(\"Select an option to continue:\")\n",
+        "print(\"1. Track a flight by callsign\")\n",
+        "print(\"2. Show all emergency flights\")\n",
+        "\n",
+        "one_or_two = int(input(\"Please type a selection from above: \"))\n",
+        "\n",
+        "\n",
+        "if one_or_two == 1:\n",
+        "\n",
+        "    airlines = {\n",
+        "    \"AMERICAN\": \"AAL\",\n",
+        "    \"DELTA\": \"DAL\",\n",
+        "    \"UNITED\": \"UAL\"\n",
+        "    }\n",
+        "\n",
+        "    airline = input(\"Enter the airline name: \").upper()\n",
+        "\n",
+        "    if airline in airlines:\n",
+        "        callsign = airlines[airline]\n",
+        "        print(\"Callsign:\", callsign)\n",
+        "    else:\n",
+        "        print(\"Airline not found\")\n",
+        "\n",
+        "    flightnum = int(input(\"Enter the flight number: \"))\n",
+        "    url = f\"https://api.adsb.lol/v2/callsign/{callsign}{flightnum}\"\n",
+        "\n",
+        "    response = requests.get(url)\n",
+        "\n",
+        "    if response.status_code == 200:\n",
+        "        data = response.json()\n",
+        "\n",
+        "        if data[\"ac\"]:\n",
+        "\n",
+        "            plane = data[\"ac\"][0]\n",
+        "\n",
+        "            print(\"\\nFlight:\", plane.get(\"flight\"))\n",
+        "            print(\"Registration:\", plane.get(\"r\"))\n",
+        "            print(\"Aircraft type:\", plane.get(\"t\"))\n",
+        "            print(\"Latitude:\", plane.get(\"lat\"))\n",
+        "            print(\"Longitude:\", plane.get(\"lon\"))\n",
+        "            print(\"Altitude:\", plane.get(\"alt_baro\"), \"ft\")\n",
+        "            print(\"Speed:\", plane.get(\"gs\"))\n",
+        "\n",
+        "            print(\"\")\n",
+        "            print(\"Tracking Link:\",\n",
+        "                  f\"https://globe.adsb.lol/?icao={plane.get('hex')}\")\n",
+        "\n",
+        "            # Display map\n",
+        "            create_map([plane])\n",
+        "\n",
+        "\n",
+        "        else:\n",
+        "            print(\"Flight not currently tracked\")\n",
+        "\n",
+        "    else:\n",
+        "        print(\"API Error:\", response.status_code)\n",
+        "\n",
+        "\n",
+        "\n",
+        "elif one_or_two == 2:\n",
+        "\n",
+        "    print(\"\\nSquawk Types:\")\n",
+        "    print(\"A) 7500: Active Hijacking\")\n",
+        "    print(\"B) 7600: Communication Failure\")\n",
+        "    print(\"C) 7700: Mechanical/Other Failure\")\n",
+        "    print(\"D) All Emergencies\")\n",
+        "\n",
+        "    squawk_type = input(\n",
+        "        \"Which squawk would you like to track: \"\n",
+        "    ).lower()\n",
+        "\n",
+        "\n",
+        "    if squawk_type == \"a\":\n",
+        "        codes = [\"7500\"]\n",
+        "\n",
+        "    elif squawk_type == \"b\":\n",
+        "        codes = [\"7600\"]\n",
+        "\n",
+        "    elif squawk_type == \"c\":\n",
+        "        codes = [\"7700\"]\n",
+        "\n",
+        "    elif squawk_type == \"d\":\n",
+        "        codes = [\"7500\", \"7600\", \"7700\"]\n",
+        "\n",
+        "    else:\n",
+        "        print(\"Invalid option\")\n",
+        "        codes = []\n",
+        "\n",
+        "\n",
+        "    emergency_planes = []\n",
+        "\n",
+        "\n",
+        "    for code in codes:\n",
+        "\n",
+        "        url = f\"https://api.adsb.lol/v2/squawk/{code}\"\n",
+        "\n",
+        "        response = requests.get(url)\n",
+        "\n",
+        "        if response.status_code == 200:\n",
+        "\n",
+        "            data = response.json()\n",
+        "\n",
+        "            print(f\"\\nSquawk {code}:\")\n",
+        "            print(f\"Aircraft found: {data['total']}\")\n",
+        "\n",
+        "            for plane in data[\"ac\"]:\n",
+        "\n",
+        "                emergency_planes.append(plane)\n",
+        "\n",
+        "                print(\n",
+        "                    \"Flight:\", plane.get(\"flight\", \"Unknown\"),\n",
+        "                    \"Registration:\", plane.get(\"r\", \"Unknown\"),\n",
+        "                    \"Type:\", plane.get(\"t\", \"Unknown\"),\n",
+        "                    \"Lat:\", plane.get(\"lat\"),\n",
+        "                    \"Lon:\", plane.get(\"lon\")\n",
+        "                )\n",
+        "\n",
+        "        else:\n",
+        "            print(\"API Error:\", response.status_code)\n",
+        "\n",
+        "\n",
+        "    # Show all emergency aircraft on one map\n",
+        "    create_map(emergency_planes)\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 1000
+        },
+        "id": "s0B4m3vAs-hS",
+        "outputId": "aa765bf6-42c2-44e4-a970-5fd6fabb1bb0"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Welcome to AKM Flight Tracker powered by ADSB.LOL\n",
+            "Select an option to continue:\n",
+            "1. Track a flight by callsign\n",
+            "2. Show all emergency flights\n",
+            "Please type a selection from above: 1\n",
+            "Enter the airline name: American\n",
+            "Callsign: AAL\n",
+            "Enter the flight number: 2653\n",
+            "\n",
+            "Flight: AAL2653 \n",
+            "Registration: N860NN\n",
+            "Aircraft type: B738\n",
+            "Latitude: 36.662168\n",
+            "Longitude: -117.550088\n",
+            "Altitude: 32950 ft\n",
+            "Speed: 454.8\n",
+            "\n",
+            "Tracking Link: https://globe.adsb.lol/?icao=abd010\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<folium.folium.Map at 0x79e9a85f1340>"
+            ],
+            "text/html": [
+              "<div style=\"width:100%;\"><div style=\"position:relative;width:100%;height:0;padding-bottom:60%;\"><span style=\"color:#565656\">Make this Notebook Trusted to load map: File -> Trust Notebook</span><iframe srcdoc=\"&lt;!DOCTYPE html&gt;\n",
+              "&lt;html&gt;\n",
+              "&lt;head&gt;\n",
+              "    \n",
+              "    &lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;\n",
+              "    &lt;script src=&quot;https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js&quot;&gt;&lt;/script&gt;\n",
+              "    &lt;script src=&quot;https://code.jquery.com/jquery-3.7.1.min.js&quot;&gt;&lt;/script&gt;\n",
+              "    &lt;script src=&quot;https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js&quot;&gt;&lt;/script&gt;\n",
+              "    &lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js&quot;&gt;&lt;/script&gt;\n",
+              "    &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css&quot;/&gt;\n",
+              "    &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css&quot;/&gt;\n",
+              "    &lt;link rel=&quot;stylesheet&quot; href=&quot;https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css&quot;/&gt;\n",
+              "    &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css&quot;/&gt;\n",
+              "    &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css&quot;/&gt;\n",
+              "    &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css&quot;/&gt;\n",
+              "    \n",
+              "            &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,\n",
+              "                initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot; /&gt;\n",
+              "            &lt;style&gt;\n",
+              "                #map_e7109f1856a2038830e63a5cf0c8b044 {\n",
+              "                    position: relative;\n",
+              "                    width: 100.0%;\n",
+              "                    height: 100.0%;\n",
+              "                    left: 0.0%;\n",
+              "                    top: 0.0%;\n",
+              "                }\n",
+              "                .leaflet-container { font-size: 1rem; }\n",
+              "            &lt;/style&gt;\n",
+              "\n",
+              "            &lt;style&gt;html, body {\n",
+              "                width: 100%;\n",
+              "                height: 100%;\n",
+              "                margin: 0;\n",
+              "                padding: 0;\n",
+              "            }\n",
+              "            &lt;/style&gt;\n",
+              "\n",
+              "            &lt;style&gt;#map {\n",
+              "                position:absolute;\n",
+              "                top:0;\n",
+              "                bottom:0;\n",
+              "                right:0;\n",
+              "                left:0;\n",
+              "                }\n",
+              "            &lt;/style&gt;\n",
+              "\n",
+              "            &lt;script&gt;\n",
+              "                L_NO_TOUCH = false;\n",
+              "                L_DISABLE_3D = false;\n",
+              "            &lt;/script&gt;\n",
+              "\n",
+              "        \n",
+              "&lt;/head&gt;\n",
+              "&lt;body&gt;\n",
+              "    \n",
+              "    \n",
+              "            &lt;div class=&quot;folium-map&quot; id=&quot;map_e7109f1856a2038830e63a5cf0c8b044&quot; &gt;&lt;/div&gt;\n",
+              "        \n",
+              "&lt;/body&gt;\n",
+              "&lt;script&gt;\n",
+              "    \n",
+              "    \n",
+              "            var map_e7109f1856a2038830e63a5cf0c8b044 = L.map(\n",
+              "                &quot;map_e7109f1856a2038830e63a5cf0c8b044&quot;,\n",
+              "                {\n",
+              "                    center: [36.662168, -117.550088],\n",
+              "                    crs: L.CRS.EPSG3857,\n",
+              "                    ...{\n",
+              "  &quot;zoom&quot;: 7,\n",
+              "  &quot;zoomControl&quot;: true,\n",
+              "  &quot;preferCanvas&quot;: false,\n",
+              "}\n",
+              "\n",
+              "                }\n",
+              "            );\n",
+              "\n",
+              "            \n",
+              "\n",
+              "        \n",
+              "    \n",
+              "            var tile_layer_f1172175c9ddc25dc0239e5eab59c8f5 = L.tileLayer(\n",
+              "                &quot;https://tile.openstreetmap.org/{z}/{x}/{y}.png&quot;,\n",
+              "                {\n",
+              "  &quot;minZoom&quot;: 0,\n",
+              "  &quot;maxZoom&quot;: 19,\n",
+              "  &quot;maxNativeZoom&quot;: 19,\n",
+              "  &quot;noWrap&quot;: false,\n",
+              "  &quot;attribution&quot;: &quot;\\u0026copy; \\u003ca href=\\&quot;https://www.openstreetmap.org/copyright\\&quot;\\u003eOpenStreetMap\\u003c/a\\u003e contributors&quot;,\n",
+              "  &quot;subdomains&quot;: &quot;abc&quot;,\n",
+              "  &quot;detectRetina&quot;: false,\n",
+              "  &quot;tms&quot;: false,\n",
+              "  &quot;opacity&quot;: 1,\n",
+              "}\n",
+              "\n",
+              "            );\n",
+              "        \n",
+              "    \n",
+              "            tile_layer_f1172175c9ddc25dc0239e5eab59c8f5.addTo(map_e7109f1856a2038830e63a5cf0c8b044);\n",
+              "        \n",
+              "    \n",
+              "            var marker_e2662e5e01449458b3602e5082ec2b8b = L.marker(\n",
+              "                [36.662168, -117.550088],\n",
+              "                {\n",
+              "}\n",
+              "            ).addTo(map_e7109f1856a2038830e63a5cf0c8b044);\n",
+              "        \n",
+              "    \n",
+              "            var icon_efec0247ad64c155e595594a74dadcbe = L.AwesomeMarkers.icon(\n",
+              "                {\n",
+              "  &quot;markerColor&quot;: &quot;blue&quot;,\n",
+              "  &quot;iconColor&quot;: &quot;white&quot;,\n",
+              "  &quot;icon&quot;: &quot;plane&quot;,\n",
+              "  &quot;prefix&quot;: &quot;glyphicon&quot;,\n",
+              "  &quot;extraClasses&quot;: &quot;fa-rotate-0&quot;,\n",
+              "}\n",
+              "            );\n",
+              "        \n",
+              "    \n",
+              "        var popup_e8aec989506907392e1ea57afd037c97 = L.popup({\n",
+              "  &quot;maxWidth&quot;: &quot;100%&quot;,\n",
+              "});\n",
+              "\n",
+              "        \n",
+              "            \n",
+              "                var html_f32f8a66adb1c3fa1cbb616dc1093680 = $(`&lt;div id=&quot;html_f32f8a66adb1c3fa1cbb616dc1093680&quot; style=&quot;width: 100.0%; height: 100.0%;&quot;&gt;         Flight: AAL2653 &lt;br&gt;         Registration: N860NN&lt;br&gt;         Aircraft Type: B738&lt;br&gt;         Altitude: 32950 ft&lt;br&gt;         Speed: 454.8 knots         &lt;/div&gt;`)[0];\n",
+              "                popup_e8aec989506907392e1ea57afd037c97.setContent(html_f32f8a66adb1c3fa1cbb616dc1093680);\n",
+              "            \n",
+              "        \n",
+              "\n",
+              "        marker_e2662e5e01449458b3602e5082ec2b8b.bindPopup(popup_e8aec989506907392e1ea57afd037c97)\n",
+              "        ;\n",
+              "\n",
+              "        \n",
+              "    \n",
+              "    \n",
+              "                marker_e2662e5e01449458b3602e5082ec2b8b.setIcon(icon_efec0247ad64c155e595594a74dadcbe);\n",
+              "            \n",
+              "&lt;/script&gt;\n",
+              "&lt;/html&gt;\" style=\"position:absolute;width:100%;height:100%;left:0;top:0;border:none !important;\" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe></div></div>"
+            ]
+          },
+          "metadata": {}
+        }
+      ]
+    }
+  ]
+}
